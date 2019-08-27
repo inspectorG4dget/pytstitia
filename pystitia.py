@@ -7,6 +7,7 @@ from argparse import Namespace
 def contracts(preconditions=(), postconditions=()):
     def decorator(fn):
         def wrapper(*args):
+            # __testmode__ = False  # FIXME: inject __testmode__ when calling functions
             try: __testmode__
             except: raise NameError("__testmode__ not set")
 
@@ -15,15 +16,17 @@ def contracts(preconditions=(), postconditions=()):
                 fails = []
                 for i,func in enumerate(preconditions):
                     if not callCondition(fn, func, args): fails.append(i)
-                if fails: raise PreConditionError(f"PreCondition functions failed:\n", '\t', *map(str, fails))
+                if fails:
+                    raise PreConditionError(f"PreCondition functions failed on {fn.__name__} in {inspect.getabsfile(fn)}:{inspect.getsourcelines(fn)[1]}:\n\t {','.join(map(str, fails))}")
 
             if postconditions: __old__, __id__ = cacheOld(fn, args)
 
             fn.__globals__['__testmode__'] = __testmode__
             try:
                 __return__ = fn(*args)
-            except:
+            except Exception as e:
                 print("DEBUG:", fn)
+                # fn(*args)
                 raise
 
             if __testmode__:
@@ -34,7 +37,7 @@ def contracts(preconditions=(), postconditions=()):
                     func.__globals__['__return__'] = __return__
 
                     if not callCondition(fn, func, args): fails.append(i)
-                if fails: raise PostConditionError("PostCondition functions failed:\n\t {}".format(' '.join(map(str, fails))))
+                if fails: raise PostConditionError("PostCondition functions failed on {} in {}:{}:\n\t {}".format(fn.__name__, inspect.getabsfile(fn), inspect.getsourcelines(fn)[1], ' '.join(map(str, fails))))
 
             return __return__
         return wrapper
