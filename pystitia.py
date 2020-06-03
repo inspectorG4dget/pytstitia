@@ -7,7 +7,6 @@ from argparse import Namespace
 def contracts(preconditions=(), postconditions=()):
     def decorator(fn):
         def wrapper(*args):
-            # __testmode__ = False  # FIXME: inject __testmode__ when calling functions
             try: __testmode__
             except: raise NameError("__testmode__ not set")
 
